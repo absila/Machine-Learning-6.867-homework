@@ -91,7 +91,9 @@ class Simulator(object):
 
         self.options['Sensor'] = dict()
         self.options['Sensor']['rayLength'] = 10
+        self.options['Sensor']['rayMinToHit'] = 8
         self.options['Sensor']['numRays'] = 20
+
 
 
         self.options['Car'] = dict()
@@ -142,6 +144,7 @@ class Simulator(object):
 
         defaultOptions['Sensor'] = dict()
         defaultOptions['Sensor']['rayLength'] = 10
+        defaultOptions['Sensor']['rayMinToHit'] = 8
         defaultOptions['Sensor']['numRays'] = 20
 
 
@@ -185,7 +188,8 @@ class Simulator(object):
         self.setDefaultOptions()
 
         self.Sensor = SensorObj(rayLength=self.options['Sensor']['rayLength'],
-                                numRays=self.options['Sensor']['numRays'])
+                                numRays=self.options['Sensor']['numRays'],
+                                rayMinToHit=self.options['Sensor']['rayMinToHit'])
         self.Controller = ControllerObj(self.Sensor)
         self.Car = CarPlant( controller=self.Controller,
                             velocity=self.options['Car']['velocity'])
@@ -443,7 +447,7 @@ class Simulator(object):
         self.controllerTypeOrder = ['defaultRandom', 'learnedRandom', 'learned', 'default']
         self.counter = 0
         self.simulationData = []
-    
+
         self.initializeStatusBar()
 
         self.idxDict = dict()
@@ -542,7 +546,7 @@ class Simulator(object):
         self.nextTickComplete = 1.0 / float(self.numTicks)
         self.nextTickIdx = 1
         print "Simulation percentage complete: (", self.numTicks, " # is complete)"
-    
+
     def printStatusBar(self):
         fractionDone = float(self.counter) / float(self.numTimesteps)
         if fractionDone > self.nextTickComplete:
@@ -550,7 +554,7 @@ class Simulator(object):
             self.nextTickIdx += 1
             self.nextTickComplete += 1.0 / self.numTicks
 
-            timeSoFar = time.time() - self.startSimTime 
+            timeSoFar = time.time() - self.startSimTime
             estimatedTimeLeft_sec = (1 - fractionDone) * timeSoFar / fractionDone
             estimatedTimeLeft_minutes = estimatedTimeLeft_sec / 60.0
 

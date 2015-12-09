@@ -6,9 +6,10 @@ import ddapp.objectmodel as om
 
 class SensorObj(object):
 
-    def __init__(self, FOV=180.0, numRays=20, rayLength=8):
+    def __init__(self, FOV=180.0, numRays=20, rayLength=8, rayMinToHit=0):
         self.numRays = numRays
         self.rayLength = rayLength
+        self.rayMinToHit = rayMinToHit
 
         FOVrad = FOV * np.pi/180.0
         self.angleMin = -FOVrad/2
@@ -54,4 +55,10 @@ class SensorObj(object):
 
         result = locator.IntersectWithLine(rayOrigin, rayEnd, tolerance, lineT, pt, pcoords, subId)
 
-        return pt if result else None
+        if result:
+            if lineT*self.rayLength > self.rayMinToHit:
+                return pt
+            else:
+                return None
+        else:
+            return None
