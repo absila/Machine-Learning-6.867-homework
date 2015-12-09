@@ -658,12 +658,26 @@ class Simulator(object):
             ray = self.Sensor.rays[:,i]
             rayTransformed = np.array(frame.transform.TransformNormal(ray))
             #print "rayTransformed is", rayTransformed
-            intersection = self.Sensor.raycast(self.locator, origin, origin + rayTransformed*self.Sensor.rayLength)
+            intersection,wasOccluded = self.Sensor.pushbroom(self.locator, origin, origin + rayTransformed*self.Sensor.rayLength)
+
 
             if intersection is not None:
-                d.addLine(origin, intersection, color=[1,0,0])
+
+                # might be an occlusion
+
+                if lineT < 0.8:
+                    # occlusion!
+                    d.addLine(origin, intersection, color=[1,1,0])
+                else:
+                    d.addLine(origin+rayTransformed*rayLength*.8, intersection, color=[1,0,0])
             else:
-                d.addLine(origin, origin+rayTransformed*self.Sensor.rayLength, color=colorMaxRange)
+                d.addLine(origin+rayTransformed*rayLength*.8, origin+rayTransformed*rayLength, color=[0,1,0])
+
+
+            #if intersection is not None:
+                #d.addLine(origin, intersection, color=[1,0,0])
+            #else:
+                #d.addLine(origin, origin+rayTransformed*self.Sensor.rayLength, color=colorMaxRange)
 
         vis.updatePolyData(d.getPolyData(), 'rays', colorByName='RGB255')
 

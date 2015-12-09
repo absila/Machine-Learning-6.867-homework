@@ -33,7 +33,7 @@ class SensorObj(object):
         for i in range(0,self.numRays):
             ray = self.rays[:,i]
             rayTransformed = np.array(frame.transform.TransformNormal(ray))
-            intersection = self.raycast(self.locator, origin, origin + rayTransformed*self.rayLength)
+            intersection,lineT = self.raycast(self.locator, origin, origin + rayTransformed*self.rayLength)
             if intersection is None:
                 distances[i] = self.rayLength
             else:
@@ -56,9 +56,18 @@ class SensorObj(object):
         result = locator.IntersectWithLine(rayOrigin, rayEnd, tolerance, lineT, pt, pcoords, subId)
 
         if result:
-            if lineT*self.rayLength > self.rayMinToHit:
-                return pt
-            else:
-                return None
+            return pt,lineT*self.rayLength
         else:
-            return None
+            return None,None
+
+    def pushbroom(self, locator, rayOrigin, rayEnd):
+        # returns pt/None, wasOccluded (true if occluded)
+        pt,lineT = raycast(self, locator, rayOrigin, rayEnd)
+
+        if pt:
+            if lineT >= self.rayMinToHit:
+                return pt,False
+            else:
+                return None,True
+        else:
+            return None,False
