@@ -66,18 +66,18 @@ def calcInput(state, t):
 def dynamics(state, t):
 
     dqdt = np.zeros_like(state)
-    
+
     u = calcInput(state, t)
 
     dqdt[0] = v*np.cos(state[2])
-    dqdt[1] = v*np.sin(state[2]) 
+    dqdt[1] = v*np.sin(state[2])
     dqdt[2] = u
-    
+
     return dqdt
 
 endTime = 10
 def simulate(dt=0.05):
-    
+
     t = np.arange(0.0, endTime, dt)
     y = integrate.odeint(dynamics, state, t)
     print y
@@ -124,7 +124,11 @@ def computeIntersection(locator, rayOrigin, rayEnd):
 
     result = locator.IntersectWithLine(rayOrigin, rayEnd, tolerance, lineT, pt, pcoords, subId)
 
-    return pt if result else None
+    if result:
+        return pt, lineT
+    else:
+        return None,None
+    #return pt, lineT if result else None,None
 
 
 def updateDrawIntersection(frame):
@@ -137,13 +141,19 @@ def updateDrawIntersection(frame):
         ray = rays[:,i]
         rayTransformed = np.array(frame.transform.TransformNormal(ray))
         #print "rayTransformed is", rayTransformed
-        intersection = computeIntersection(locator, origin, origin + rayTransformed*rayLength)
-
+        intersection,lineT = computeIntersection(locator, origin, origin + rayTransformed*rayLength)
 
         if intersection is not None:
-            d.addLine(origin, intersection, color=[1,0,0])
+
+            # might be an occlusion
+
+            if lineT < 0.8:
+                # occlusion!
+                d.addLine(origin, intersection, color=[1,1,0])
+            else:
+                d.addLine(origin+rayTransformed*rayLength*.8, intersection, color=[1,0,0])
         else:
-            d.addLine(origin, origin+rayTransformed*rayLength, color=[0,1,0])
+            d.addLine(origin+rayTransformed*rayLength*.8, origin+rayTransformed*rayLength, color=[0,1,0])
 
     vis.updatePolyData(d.getPolyData(), 'rays', colorByName='RGB255')
 
@@ -164,7 +174,7 @@ def tick():
     setRobotState(x,y,0.0)
 
 def tick2():
-    
+
     newtime = time.time() - playTime
     print time.time() - playTime
 
@@ -176,7 +186,7 @@ def tick2():
 def tick3():
 
     newtime = time.time() - playTime
-    
+
     newtime = np.clip(newtime, 0, endTime)
 
     p = newtime/endTime
@@ -201,17 +211,17 @@ def onPlayButton():
     print 'play'
     playTimer.start()
 
-    global playTime 
+    global playTime
     playTime = time.time()
 
 
 
 
 #########################
-numRays = 20
+numRays = 100
 rayLength = 5
-angleMin = -np.pi/2
-angleMax = np.pi/2
+angleMin = -0.785398#np.pi/2
+angleMax = 0.785398#np.pi/2
 angleGrid = np.linspace(angleMin, angleMax, numRays)
 rays = np.zeros((3,numRays))
 rays[0,:] = np.cos(angleGrid)
