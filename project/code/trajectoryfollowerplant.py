@@ -1,42 +1,32 @@
 import numpy as np
 import scipy.integrate as integrate
+import csv
+import os
+import trajectorylibrary
 
-class CarPlant(object):
+class TrajectoryFollowerPlant(object):
 
-    def __init__(self, controller=None, velocity=12):
-        # if dt is None:
-        #     raise ValueError("must specify timestep dt when constructing CarPlant")
-        # initial state
+    def __init__(self, trajectoryLibDir):
         self.x = 0.0
         self.y = 0.0
-        self.psi = 0.0
+        self.theta = 0.0
 
         rad = np.pi/180.0
 
-        self.state = np.array([self.x, self.y, self.psi*rad])
+        self.state = np.array([self.x, self.y, self.theta*rad])
 
-        # constant velocity
-        self.v = velocity
-
-        self.Controller = controller
+        self.LoadLibrary(trajectoryLibDir)
 
 
-    def dynamics(self, state, t, controlInput=None):
+    def dynamics(self, state, t, controlInput):
 
         dqdt = np.zeros_like(state)
 
-        if controlInput is not None:
-            u = controlInput
-        else:
-            # need to calculate from controller
-            if self.Controller is None:
-                u = np.sin(t)
-            else:
-                u = self.Controller.computeControlInput(state, t, self.frame)
+        u = controlInput
 
-        dqdt[0] = self.v*np.cos(state[2])
-        dqdt[1] = self.v*np.sin(state[2])
-        dqdt[2] = u # we are directly controlling yaw rate
+        dqdt[0] = 12
+        dqdt[1] = 0
+        dqdt[2] = 0
 
         return dqdt
 

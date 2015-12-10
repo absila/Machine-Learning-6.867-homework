@@ -33,11 +33,14 @@ class SensorObj(object):
         for i in range(0,self.numRays):
             ray = self.rays[:,i]
             rayTransformed = np.array(frame.transform.TransformNormal(ray))
-            intersection,lineT = self.raycast(self.locator, origin, origin + rayTransformed*self.rayLength)
-            if intersection is None:
+            intersection,occludeIntersection = self.raycast(self.locator, origin, origin + rayTransformed*self.rayLength)
+            if intersection is None and occludeIntersection is None:
                 distances[i] = self.rayLength
             else:
-                distances[i] = np.linalg.norm(intersection - origin)
+                if intersection is not None:
+                    distances[i] = np.linalg.norm(intersection - origin)
+                else:
+                    distances[i] = np.linalg.norm(occludeIntersection - origin)
 
         return distances
 

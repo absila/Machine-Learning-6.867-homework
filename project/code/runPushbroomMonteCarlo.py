@@ -3,9 +3,6 @@ from simulator import Simulator
 
 sim = Simulator(autoInitialize=False, verbose=False)
 
-sim.sarsaType = "continuous"
-sim.Sarsa_numInnerBins = 4
-sim.Sarsa_numOuterBins = 4
 sim.Sensor_rayLength = 10
 
 #
@@ -40,12 +37,8 @@ sim.learningRandomTime = 4000
 sim.learningEvalTime = 500
 sim.defaultControllerTime = 500
 
-sim.options['SARSA']['epsilonGreedy'] = 0.4
-sim.options['SARSA']['burnInTime'] = sim.supervisedTrainingTime/1.5
-sim.options['Reward']['actionCost'] = 0.4
-sim.options['Reward']['raycastCost'] = 40.0
-
 sim.options['Sensor']['rayMinToHit'] = 9.5
+sim.options['runTime']['simTime'] = 5
 
 # sim.options['Reward']['collisionPenalty'] = 200
 
