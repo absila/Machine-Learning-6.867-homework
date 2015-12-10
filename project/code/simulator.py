@@ -91,7 +91,7 @@ class Simulator(object):
 
         self.options['Sensor'] = dict()
         self.options['Sensor']['rayLength'] = 10
-        self.options['Sensor']['rayMinToHit'] = 8
+        self.options['Sensor']['rayMinToHit'] = 9.5
         self.options['Sensor']['numRays'] = 20
 
 
@@ -144,7 +144,7 @@ class Simulator(object):
 
         defaultOptions['Sensor'] = dict()
         defaultOptions['Sensor']['rayLength'] = 10
-        defaultOptions['Sensor']['rayMinToHit'] = 8
+        defaultOptions['Sensor']['rayMinToHit'] = 9.5
         defaultOptions['Sensor']['numRays'] = 20
 
 
@@ -658,21 +658,18 @@ class Simulator(object):
             ray = self.Sensor.rays[:,i]
             rayTransformed = np.array(frame.transform.TransformNormal(ray))
             #print "rayTransformed is", rayTransformed
-            intersection,wasOccluded = self.Sensor.pushbroom(self.locator, origin, origin + rayTransformed*self.Sensor.rayLength)
+            intersection,wasOccluded = self.Sensor.raycast(self.locator, origin, origin + rayTransformed*self.Sensor.rayLength)
 
 
             if intersection is not None:
-
-                # might be an occlusion
-
-                if lineT < 0.8:
-                    # occlusion!
-                    d.addLine(origin, intersection, color=[1,1,0])
-                else:
-                    d.addLine(origin+rayTransformed*rayLength*.8, intersection, color=[1,0,0])
+                d.addLine(origin+rayTransformed*self.Sensor.rayMinToHit, intersection, color=[1,0,0])
             else:
-                d.addLine(origin+rayTransformed*rayLength*.8, origin+rayTransformed*rayLength, color=[0,1,0])
 
+                if wasOccluded is not None:
+                    # occlusion!
+                    d.addLine(origin, wasOccluded, color=[1,1,0])
+                else:
+                    d.addLine(origin+rayTransformed*self.Sensor.rayMinToHit, origin+rayTransformed*self.Sensor.rayLength, color=[0,1,0])
 
             #if intersection is not None:
                 #d.addLine(origin, intersection, color=[1,0,0])

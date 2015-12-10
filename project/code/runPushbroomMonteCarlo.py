@@ -45,6 +45,8 @@ sim.options['SARSA']['burnInTime'] = sim.supervisedTrainingTime/1.5
 sim.options['Reward']['actionCost'] = 0.4
 sim.options['Reward']['raycastCost'] = 40.0
 
+sim.options['Sensor']['rayMinToHit'] = 9.5
+
 # sim.options['Reward']['collisionPenalty'] = 200
 
 

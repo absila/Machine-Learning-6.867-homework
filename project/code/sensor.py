@@ -56,18 +56,10 @@ class SensorObj(object):
         result = locator.IntersectWithLine(rayOrigin, rayEnd, tolerance, lineT, pt, pcoords, subId)
 
         if result:
-            return pt,lineT*self.rayLength
+            if lineT*self.rayLength >= self.rayMinToHit:
+                return pt,None
+            else:
+                return None,pt
         else:
             return None,None
 
-    def pushbroom(self, locator, rayOrigin, rayEnd):
-        # returns pt/None, wasOccluded (true if occluded)
-        pt,lineT = raycast(self, locator, rayOrigin, rayEnd)
-
-        if pt:
-            if lineT >= self.rayMinToHit:
-                return pt,False
-            else:
-                return None,True
-        else:
-            return None,False
