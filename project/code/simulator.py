@@ -17,7 +17,7 @@ from PythonQt import QtCore, QtGui
 
 from world import World
 from car import CarPlant
-from trajectoryfollowerplant import TrajectoryFollowerPlant
+from TrajectoryFollowerPlant import TrajectoryFollowerPlant
 from sensor import SensorObj
 from controller import ControllerObj
 
@@ -76,7 +76,7 @@ class Simulator(object):
         defaultOptions['Car']['velocity'] = 12
 
         defaultOptions['TrajectoryLibrary'] = dict()
-        defaultOptions['TrajectoryLibrary']['dir'] = ''
+        defaultOptions['TrajectoryLibrary']['dir'] = '/home/abarry/realtime/controllers/TrajectoryLibrary/trajlib'
 
         defaultOptions['dt'] = 0.05
 
