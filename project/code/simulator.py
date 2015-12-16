@@ -78,7 +78,8 @@ class Simulator(object):
             self.initialize()
 
     def tvlqr_action_handler(self, channel, data):
-        print 'LCM handler for channel: ' + channel
+        msg = tvlqr_controller_action.decode(data)
+        self.Plant.SetTrajectory(msg.trajectory_number)
 
     def setDefaultOptions(self):
 
@@ -207,7 +208,6 @@ class Simulator(object):
 
 
     def PublishPlantState(self, state):
-        print 'state = ' + str(state)
         msg = pose_t()
         msg.utime = int(time.time()*1000000)
         msg.pos[0] = state[0]
@@ -240,7 +240,7 @@ class Simulator(object):
 
         self.lc.publish("STATE_ESTIMATOR_POSE", msg.encode())
 
-    def PublishRaycast(self, intersections, occluded):
+    def PublishRaycast(self, bodyFrameIntersectionArray, occluded):
         msg = stereo()
         msg.timestamp = int(time.time()*1000000)
 
@@ -254,16 +254,14 @@ class Simulator(object):
 
         rotmat = np.matrix([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
 
-        for hit in intersections:
+        for hit in bodyFrameIntersectionArray:
             if hit is not None:
 
                 # make each 2D hit a 3D pole
 
                 for z_delta in range(-10, 10):
 
-                    this_z = z_delta
-
-                    hit[2] = this_z
+                    hit[2] = z_delta
 
                     # ok this hit is in body coordinates
                     # transform them into camera xyz coordinates
@@ -331,16 +329,16 @@ class Simulator(object):
             if rfds:
                 self.lc.handle()
             else:
-                print("no LCM messages this time")
+                pass
 
-            controlInput, controlInputIdx = self.Controller.computeControlInput(currentPlantState,
-                                                                        currentTime, self.frame,
-                                                                        raycastDistance=currentRaycast,
-                                                                        randomize=False)
+            #controlInput, controlInputIdx = self.Controller.computeControlInput(currentPlantState,
+                                                                        #currentTime, self.frame,
+                                                                        #raycastDistance=currentRaycast,
+                                                                        #randomize=False)
 
-            self.controlInputData[idx] = controlInput
+            #self.controlInputData[idx] = controlInput
 
-            nextPlantState = self.Plant.simulateOneStep(controlInput=controlInput, dt=self.dt)
+            nextPlantState = self.Plant.simulateOneStep(dt=self.dt)
 
             x = nextPlantState[0]
             y = nextPlantState[1]
@@ -348,10 +346,10 @@ class Simulator(object):
 
             self.setRobotFrameState(x,y,theta)
 
-            nextRaycast,nextOccluded,intersections = self.Sensor.raycastAllXYZ(self.frame)
+            nextRaycast,nextOccluded,bodyFrameIntersectionArray = self.Sensor.raycastAllXYZ(self.frame)
 
             self.PublishPlantState(nextPlantState)
-            self.PublishRaycast(intersections, nextOccluded)
+            self.PublishRaycast(bodyFrameIntersectionArray, nextOccluded)
 
             self.counter+=1
             # break if we are in collision
@@ -532,7 +530,6 @@ class Simulator(object):
             self.setupPlayback()
 
     def updateDrawIntersection(self, frame):
-        print 'FRAME TRANSFORM ORIENTATION = ' + str()
         origin = np.array(frame.transform.GetPosition())
         #print "origin is now at", origin
         d = DebugData()
@@ -557,7 +554,7 @@ class Simulator(object):
         if rfds:
             self.lc.handle()
         else:
-            print("no LCM messages this time")
+            pass
 
         for i in xrange(self.Sensor.numRays):
             ray = self.Sensor.rays[:,i]
@@ -582,8 +579,8 @@ class Simulator(object):
                 #d.addLine(origin, origin+rayTransformed*self.Sensor.rayLength, color=colorMaxRange)
 
         # also publish to LCM
-        currentRaycast,currentOccluded,intersections = self.Sensor.raycastAllXYZ(self.frame)
-        self.PublishRaycast(intersections, currentOccluded)
+        currentRaycast,currentOccluded,bodyFrameIntersectionArray = self.Sensor.raycastAllXYZ(self.frame)
+        self.PublishRaycast(bodyFrameIntersectionArray, currentOccluded)
 
         vis.updatePolyData(d.getPolyData(), 'rays', colorByName='RGB255')
 

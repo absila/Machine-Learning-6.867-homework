@@ -93,34 +93,48 @@ class Trajectory(object):
     def GetNumberOfPoints(self):
         return len(self.xpoints)
 
-    #def GetXyzYawTransformedPoint(self, t, transform):
-        ## apply the transformation from the global frame: orgin = (0,0,0)
-        ## to the local frame point
+    def GetXyzYawTransformedPoint(self, t, trans):
+        # apply the transformation from the global frame: origin = (0,0,0)
+        # to the local frame point
 
-        #state = self.GetState(t);
+        # transform is in the form:
+        #   trans["trans_vec"]
+        #   trans["quat"]
+        original_point = self.GetState(t);
 
-        #double original_point[3];
-        #original_point[0] = state[0];
-        #original_point[1] = state[1];
-        #original_point[2] = state[2];
-
-        ##// remove roll and pitch from the transform
-        #BotTrans trans_xyz_yaw;
-
-        #bot_trans_copy(&trans_xyz_yaw, &transform);
-
-        #double rpy[3];
-        #bot_quat_to_roll_pitch_yaw(trans_xyz_yaw.rot_quat, rpy);
-
-        #rpy[0] = 0;
-        #rpy[1] = 0;
-
-        #bot_roll_pitch_yaw_to_quat(rpy, trans_xyz_yaw.rot_quat);
-
-
+        # (from libbot)
         #bot_trans_apply_vec(&trans_xyz_yaw, original_point, xyz);
 
-    #}
+        rot = trans["quat"]
+        trans_vec = trans["trans_vec"]
+        v = []
+        v.append(original_point[0])
+        v.append(original_point[1])
+        v.append(original_point[2])
+
+        #bot_quat_rotate_to(btrans->rot_quat, src, dst);
+        ab  =  rot[0]*rot[1]
+        ac = rot[0]*rot[2]
+        ad  =  rot[0]*rot[3]
+
+        nbb = -rot[1]*rot[1]
+        bc = rot[1]*rot[2]
+        bd  =  rot[1]*rot[3]
+        ncc = -rot[2]*rot[2]
+        cd = rot[2]*rot[3]
+        ndd = -rot[3]*rot[3]
+
+        r = [0, 0, 0]
+        r[0] = 2*((ncc + ndd)*v[0] + (bc - ad)*v[1] + (ac + bd)*v[2]) + v[0]
+        r[1] = 2*((ad + bc)*v[0] + (nbb + ndd)*v[1] + (cd - ab)*v[2]) + v[1]
+        r[2] = 2*((bd - ac)*v[0] + (ab + cd)*v[1] + (nbb + ncc)*v[2]) + v[2]
+
+        dst = [0, 0, 0]
+        dst[0] = r[0] + trans_vec[0];
+        dst[1] = r[1] + trans_vec[1];
+        dst[2] = r[2] + trans_vec[2];
+
+        return dst
 
     #def ClosestObstacleInRemainderOfTrajectory(self, map2d, body_to_local, current_t):
         ## for each point remaining in the trajectory

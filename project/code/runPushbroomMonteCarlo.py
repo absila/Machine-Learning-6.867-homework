@@ -30,8 +30,9 @@ sim = Simulator(autoInitialize=False, verbose=False)
 # sim.circleRadius           = 1.5
 # sim.worldScale             = 1
 
+sim.options['dt'] = 0.001
 sim.options['Sensor']['rayMinToHit'] = 9.5
-sim.options['runTime']['simTime'] = 5
+sim.options['runTime']['simTime'] = 10
 
 # sim.options['Reward']['collisionPenalty'] = 200
 
@@ -41,7 +42,7 @@ sim.randomizeControl       = True
 sim.percentObsDensity      = 5
 sim.nonRandomWorld         = True
 sim.circleRadius           = 2.5
-sim.worldScale             = 1
+sim.worldScale             = 10
 sim.options['World']['obstaclesInnerFraction'] = 0.8
 
 

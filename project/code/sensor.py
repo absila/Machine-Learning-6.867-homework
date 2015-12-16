@@ -21,6 +21,7 @@ class SensorObj(object):
         self.rays[0,:] = np.cos(self.angleGrid)
         self.rays[1,:] = -np.sin(self.angleGrid)
 
+        print 'self.rays = ' + str(self.rays)
     def setLocator(self, locator):
         self.locator = locator
 
@@ -33,7 +34,7 @@ class SensorObj(object):
 
         distances = np.zeros(self.numRays)
         occluded = []
-        intersectionArray = []
+        bodyFrameIntersectionArray = []
 
         origin = np.array(frame.transform.GetPosition())
 
@@ -43,23 +44,20 @@ class SensorObj(object):
             intersection,occludeIntersection = self.raycast(self.locator, origin, origin + rayTransformed*self.rayLength)
 
 
-
-
             if intersection is None and occludeIntersection is None:
                 distances[i] = self.rayLength
                 occluded.append(False)
-                intersectionArray.append(None)
+                bodyFrameIntersectionArray.append(None)
             else:
                 if intersection is not None:
                     occluded.append(False)
-                    print 'intersection[' + str(i) + '] = ' + str(intersection - origin)
-                    intersectionArray.append(intersection - origin)
+                    bodyFrameIntersectionArray.append([self.rays[0][i]*self.rayLength, self.rays[1][i]*self.rayLength, self.rays[2][i]*self.rayLength])
                     distances[i] = np.linalg.norm(intersection - origin)
                 else:
                     occluded.append(True)
                     distances[i] = np.linalg.norm(occludeIntersection - origin)
 
-        return distances,occluded,intersectionArray
+        return distances,occluded,bodyFrameIntersectionArray
 
     def raycastAllFromCurrentFrameLocation(self):
         frame = om.findObjectByName('robot frame')
