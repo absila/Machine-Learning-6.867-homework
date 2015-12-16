@@ -173,7 +173,7 @@ class SARSADiscrete(SARSA):
 
 
     def computeFeatureVectorFromCurrentFrame(self):
-        raycastDistance = self.sensor.raycastAllFromCurrentFrameLocation()
+        raycastDistance,temp = self.sensor.raycastAllFromCurrentFrameLocation()
         carState = 0
         S = (carState, raycastDistance)
         featureVec = self.computeFeatureVector(S)

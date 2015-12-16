@@ -12,6 +12,7 @@ import scipy.integrate as integrate
 import argparse
 import matplotlib.pyplot as plt
 import shelve
+import math
 
 from PythonQt import QtCore, QtGui
 
@@ -20,6 +21,18 @@ from car import CarPlant
 from TrajectoryFollowerPlant import TrajectoryFollowerPlant
 from sensor import SensorObj
 from controller import ControllerObj
+from OnlineTrajectoryPlanner import OnlineTrajectoryPlanner
+
+import sys
+
+sys.path.insert(0, '/home/abarry/realtime/LCM')
+sys.path.insert(0, '/home/abarry/realtime/LCM/lcmt')
+sys.path.insert(0, '/home/abarry/realtime/LCM/mav')
+
+import lcm
+from pose_t import pose_t
+from stereo import stereo
+
 
 
 class Simulator(object):
@@ -34,6 +47,8 @@ class Simulator(object):
         self.randomSeed = 5
         self.Sensor_rayLength = 8
 
+        self.altitude = 0
+
         self.percentObsDensity = percentObsDensity
         self.supervisedTrainingTime = 10
         self.learningRandomTime = 10
@@ -42,6 +57,9 @@ class Simulator(object):
         self.nonRandomWorld = nonRandomWorld
         self.circleRadius = circleRadius
         self.worldScale = worldScale
+
+        self.lc = lcm.LCM()
+
         # create the visualizer object
         self.app = ConsoleApp()
         # view = app.createView(useGrid=False)
@@ -140,6 +158,112 @@ class Simulator(object):
         self.Plant.setFrame(self.frame)
         print "Finished initialization"
 
+    def RollPitchYawToQuat(self, rpy):
+        roll = rpy[0]
+        pitch = rpy[1]
+        yaw = rpy[2]
+
+        halfroll = roll / 2
+        halfpitch = pitch / 2
+        halfyaw = yaw / 2
+
+        sin_r2 = math.sin (halfroll)
+        sin_p2 = math.sin (halfpitch)
+        sin_y2 = math.sin (halfyaw)
+
+        cos_r2 = math.cos (halfroll)
+        cos_p2 = math.cos (halfpitch)
+        cos_y2 = math.cos (halfyaw)
+
+        q = [1, 0, 0, 0]
+
+        q[0] = cos_r2 * cos_p2 * cos_y2 + sin_r2 * sin_p2 * sin_y2
+        q[1] = sin_r2 * cos_p2 * cos_y2 - cos_r2 * sin_p2 * sin_y2
+        q[2] = cos_r2 * sin_p2 * cos_y2 + sin_r2 * cos_p2 * sin_y2
+        q[3] = cos_r2 * cos_p2 * sin_y2 - sin_r2 * sin_p2 * cos_y2
+
+        return q
+
+
+    def PublishPlantState(self, state):
+        print 'state = ' + str(state)
+        msg = pose_t()
+        msg.utime = int(time.time()*1000000)
+        msg.pos[0] = state[0]
+        msg.pos[1] = state[1]
+        msg.pos[2] = self.altitude
+
+
+        yaw = state[2]
+
+        rpy = [0, 0, yaw]
+
+        q = self.RollPitchYawToQuat(rpy)
+
+        msg.vel[0] = 0
+        msg.vel[1] = 0
+        msg.vel[2] = 0
+
+        msg.orientation[0] = q[0]
+        msg.orientation[1] = q[1]
+        msg.orientation[2] = q[2]
+        msg.orientation[3] = q[3]
+
+        msg.rotation_rate[0] = 0
+        msg.rotation_rate[1] = 0
+        msg.rotation_rate[2] = 0
+
+        msg.accel[0] = 0
+        msg.accel[1] = 0
+        msg.accel[2] = 0
+
+        self.lc.publish("STATE_ESTIMATOR_POSE", msg.encode())
+
+    def PublishRaycast(self, intersections, occluded):
+        msg = stereo()
+        msg.timestamp = int(time.time()*1000000)
+
+        msg.frame_number = 0
+        msg.video_number = -1
+
+        x = []
+        y = []
+        z = []
+        grey = []
+
+        #rotmat = np.matrix([[0, -1, 0], [0, 0, 1], [-1, 0, 0]])
+        rotmat = np.matrix([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
+
+        print 'intersections = ' + str(intersections)
+
+        for hit in intersections:
+            if hit is not None:
+                print 'hit = ' + str(hit)
+
+                # ok this hit is in body coordinates
+                # transform them into camera xyz coordinates
+
+                hit2 = np.matrix(hit)
+                rotvec = rotmat.dot(hit2.transpose())
+
+                # must have triple hits for the
+                # stereo filter
+                for q in range(0,3):
+                    x.append(rotvec[0]) # left/right
+                    y.append(rotvec[1]) # up/down
+                    z.append(rotvec[2]) # forward distance
+
+                    grey.append(0)
+
+        msg.number_of_points = len(x)
+
+        msg.x = x
+        msg.y = y
+        msg.z = z
+
+        msg.grey = grey
+
+        self.lc.publish("stereo", msg.encode())
 
     def runSingleSimulation(self, updateQValues=True, controllerType='default', simulationCutoff=None):
 
@@ -150,7 +274,7 @@ class Simulator(object):
         currentPlantState = np.copy(self.Plant.state)
         nextPlantState = np.copy(self.Plant.state)
         self.setRobotFrameState(currentPlantState[0], currentPlantState[1], currentPlantState[2])
-        currentRaycast = self.Sensor.raycastAll(self.frame)
+        currentRaycast,currentOccluded = self.Sensor.raycastAll(self.frame)
         nextRaycast = np.zeros(self.Sensor.numRays)
 
         # record the reward data
@@ -170,8 +294,10 @@ class Simulator(object):
             theta = self.stateOverTime[idx,2]
             self.setRobotFrameState(x,y,theta)
             # self.setRobotState(currentPlantState[0], currentPlantState[1], currentPlantState[2])
-            currentRaycast = self.Sensor.raycastAll(self.frame)
+            currentRaycast,currentOccluded = self.Sensor.raycastAll(self.frame)
+
             self.raycastData[idx,:] = currentRaycast
+            self.occludedData[idx,:] = currentOccluded
             S_current = (currentPlantState, currentRaycast)
 
 
@@ -185,13 +311,15 @@ class Simulator(object):
             nextPlantState = self.Plant.simulateOneStep(controlInput=controlInput, dt=self.dt)
 
             x = nextPlantState[0]
-            print x
             y = nextPlantState[1]
             theta = nextPlantState[2]
 
             self.setRobotFrameState(x,y,theta)
 
-            nextRaycast = self.Sensor.raycastAll(self.frame)
+            nextRaycast,nextOccluded,intersections = self.Sensor.raycastAllXYZ(self.frame)
+
+            self.PublishPlantState(nextPlantState)
+            self.PublishRaycast(intersections, nextOccluded)
 
             self.counter+=1
             # break if we are in collision
@@ -207,8 +335,9 @@ class Simulator(object):
 
         # fill in the last state by hand
         self.stateOverTime[self.counter,:] = currentPlantState
-        print currentPlantState
+
         self.raycastData[self.counter,:] = currentRaycast
+        self.occludedData[self.counter,:] = currentOccluded
 
 
         # this just makes sure we don't get stuck in an infinite loop.
@@ -228,6 +357,7 @@ class Simulator(object):
         maxNumTimesteps = np.size(self.t)
         self.stateOverTime = np.zeros((maxNumTimesteps+1, 3))
         self.raycastData = np.zeros((maxNumTimesteps+1, self.Sensor.numRays))
+        self.occludedData = np.zeros((maxNumTimesteps+1, self.Sensor.numRays))
         self.controlInputData = np.zeros(maxNumTimesteps+1)
         self.rewardData = np.zeros(maxNumTimesteps+1)
         self.emptyQValue = np.zeros(maxNumTimesteps+1, dtype='bool')
@@ -269,6 +399,7 @@ class Simulator(object):
         self.numTimesteps = self.counter + 1
         self.stateOverTime = self.stateOverTime[0:self.counter+1, :]
         self.raycastData = self.raycastData[0:self.counter+1, :]
+        self.occludedData = self.occludedData[0:self.counter+1, :]
         self.controlInputData = self.controlInputData[0:self.counter+1]
         self.endTime = 1.0*self.counter/self.numTimesteps*self.endTime
 
@@ -369,10 +500,20 @@ class Simulator(object):
             self.setupPlayback()
 
     def updateDrawIntersection(self, frame):
-
+        print 'FRAME TRANSFORM ORIENTATION = ' + str()
         origin = np.array(frame.transform.GetPosition())
         #print "origin is now at", origin
         d = DebugData()
+
+        state = [0, 0, 0]
+
+        state[0] = origin[0]
+        state[1] = origin[1]
+
+        orientation = frame.transform.GetOrientation()
+        state[2] = 3.1415926/180.0 * orientation[2]
+
+        self.PublishPlantState(state)
 
         sliderIdx = self.slider.value
 
@@ -400,6 +541,10 @@ class Simulator(object):
             #else:
                 #d.addLine(origin, origin+rayTransformed*self.Sensor.rayLength, color=colorMaxRange)
 
+        # also publish to LCM
+        currentRaycast,currentOccluded,intersections = self.Sensor.raycastAllXYZ(self.frame)
+        self.PublishRaycast(intersections, currentOccluded)
+
         vis.updatePolyData(d.getPolyData(), 'rays', colorByName='RGB255')
 
         #camera = self.view.camera()
@@ -416,7 +561,7 @@ class Simulator(object):
     def checkInCollision(self, raycastDistance=None):
         if raycastDistance is None:
             self.setRobotFrameState(self.Plant.state[0],self.Plant.state[1],self.Plant.state[2])
-            raycastDistance = self.Sensor.raycastAll(self.frame)
+            raycastDistance,temp = self.Sensor.raycastAll(self.frame)
 
         if np.min(raycastDistance) < self.collisionThreshold:
             return True
@@ -486,6 +631,7 @@ class Simulator(object):
         my_shelf['simulationData'] = self.simulationData
         my_shelf['stateOverTime'] = self.stateOverTime
         my_shelf['raycastData'] = self.raycastData
+        my_shelf['occludedData'] = self.occludedData
         my_shelf['controlInputData'] = self.controlInputData
         my_shelf['emptyQValue'] = self.emptyQValue
         my_shelf['numTimesteps'] = self.numTimesteps
@@ -507,6 +653,7 @@ class Simulator(object):
         # sim.runStatistics = my_shelf['runStatistics']
         sim.stateOverTime = np.array(my_shelf['stateOverTime'])
         sim.raycastData = np.array( my_shelf['raycastData'])
+        sim.occludedData = np.array(my_shelf['occludedData'])
         sim.controlInputData = np.array(my_shelf['controlInputData'])
         sim.emptyQValue = np.array(my_shelf['emptyQValue'])
         sim.numTimesteps = my_shelf['numTimesteps']

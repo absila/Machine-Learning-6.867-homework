@@ -3,8 +3,6 @@ from simulator import Simulator
 
 sim = Simulator(autoInitialize=False, verbose=False)
 
-sim.Sensor_rayLength = 10
-
 #
 # # small world
 # sim.randomSeed = 11
@@ -32,11 +30,6 @@ sim.Sensor_rayLength = 10
 # sim.circleRadius           = 1.5
 # sim.worldScale             = 1
 
-sim.supervisedTrainingTime = 3000
-sim.learningRandomTime = 4000
-sim.learningEvalTime = 500
-sim.defaultControllerTime = 500
-
 sim.options['Sensor']['rayMinToHit'] = 9.5
 sim.options['runTime']['simTime'] = 5
 
@@ -50,13 +43,6 @@ sim.nonRandomWorld         = True
 sim.circleRadius           = 2.5
 sim.worldScale             = 1
 sim.options['World']['obstaclesInnerFraction'] = 0.8
-
-
-# only try to learn the weights
-sim.supervisedTrainingTime = 6000
-sim.learningRandomTime = 0
-sim.learningEvalTime = 1500
-sim.defaultControllerTime = 0
 
 
 ## For testing

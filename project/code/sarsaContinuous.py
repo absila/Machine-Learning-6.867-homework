@@ -126,7 +126,7 @@ class SARSAContinuous(SARSA):
 
     def plotFeatureVec(self):
         carState = 0
-        raycastDistance = self.sensor.raycastAllFromCurrentFrameLocation()
+        raycastDistance,temp = self.sensor.raycastAllFromCurrentFrameLocation()
         featureVec = self.computeFeatureVector((carState, raycastDistance))
         plt.figure()
         plt.plot(self.plotGrid, featureVec[1:])
@@ -134,13 +134,13 @@ class SARSAContinuous(SARSA):
 
     def computeQValueAtFrame(self, actionIdx):
         carState = 0
-        raycastDistance = self.sensor.raycastAllFromCurrentFrameLocation()
+        raycastDistance,temp = self.sensor.raycastAllFromCurrentFrameLocation()
         S = (carState, raycastDistance)
         return self.computeQValue(S, actionIdx)
 
     def computeQValueVectorAtFrame(self):
         carState = 0
-        raycastDistance = self.sensor.raycastAllFromCurrentFrameLocation()
+        raycastDistance,temp = self.sensor.raycastAllFromCurrentFrameLocation()
         S = (carState, raycastDistance)
         QVec = self.computeQValueVector(S)
         actionIdx = np.argmax(QVec)

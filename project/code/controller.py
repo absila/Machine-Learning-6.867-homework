@@ -17,12 +17,12 @@ class ControllerObj(object):
         # u = 0
         # u = np.sin(t)
         if raycastDistance is None:
-            self.distances = self.Sensor.raycastAll(frame)
+            self.distances,temp = self.Sensor.raycastAll(frame)
         else:
             self.distances = raycastDistance
 
         # #Barry 12 controller
-        
+
 
         #u = self.countStuffController()
         u, actionIdx = self.countInverseDistancesController()

@@ -19,6 +19,14 @@ class TrajectoryFollowerPlant(object):
 
         self.lib = TrajectoryLibrary(trajectoryLibDir, False)
 
+    def GetTrajlib(self):
+        return self.lib
+
+    def GetCurrentTraj(self):
+        return self.lib.GetTrajectoryByNumber(self.current_trajnum)
+
+    def GetCurrentTrajTime(self):
+        return self.current_traj_t
 
     def dynamics(self, state, t, controlInput):
 
@@ -27,20 +35,19 @@ class TrajectoryFollowerPlant(object):
         if u is None:
             # no change in trajectory
             delta_t = t[1] - t[0]
-            print 'delta t = ' + str(delta_t)
+            #print 'delta t = ' + str(delta_t)
 
             self.current_traj_t = self.current_traj_t + delta_t
 
         else:
             # new trajectory
-            print u
             self.current_trajnum = u
 
             self.current_traj_t = 0
 
         # get state
         traj = self.lib.GetTrajectoryByNumber(self.current_trajnum)
-        print 'current traj t = ' + str(self.current_traj_t)
+        #print 'current traj t = ' + str(self.current_traj_t)
         state = traj.GetState(self.current_traj_t)
 
         x = state[0]
@@ -67,11 +74,11 @@ class TrajectoryFollowerPlant(object):
         #return newState
 
     def simulateOneStep(self, startTime=0.0, dt=0.05, controlInput=None):
-        print 'start time = ' + str(startTime)
-        print 'dt = ' + str(dt)
+        #print 'start time = ' + str(startTime)
+        #print 'dt = ' + str(dt)
         t = np.linspace(startTime, startTime+dt, 2)
-        print 't = ' + str(t)
+        #print 't = ' + str(t)
         newState = self.dynamics(self.state, t, None)
-        print newState
+        #print newState
         self.state = newState
         return self.state

@@ -57,7 +57,7 @@ class Reward(object):
 
     def computeRewardFromFrameLocation(self, u=0.0):
         carFrame = om.findObjectByName('robot frame')
-        raycastDistance = self.sensorObj.raycastAll(carFrame)
+        raycastDistance,temp = self.sensorObj.raycastAll(carFrame)
 
         carState = 0.0 # just a placeholder for now
         S = (carState, raycastDistance)

@@ -1,25 +1,37 @@
 import numpy as np
 import scipy.integrate as integrate
 import ddapp.objectmodel as om
-
+from TrajectoryFollowerPlant import TrajectoryFollowerPlant
 
 class OnlineTrajectoryPlanner(object):
 
-    def __init__(self, trajlib):
-        self.trajlib = trajlib
+    def __init__(self, sensor, plant):
+        self.Sensor = sensor
+        self.currentTraj = 0
+        self.plant = plant
 
-        # todo
+        # I need a 2D map of the previously seen points
+        # assume perfect state estimate
+        # so just record all previously seen points in a huge list
+        self.map2d = list()
 
-    def computeControlInput(self, state, t, frame, raycastDistance=None, randomize=False):
-        # test cases
-        # u = 0
-        # u = np.sin(t)
-        if raycastDistance is None:
-            self.distances = self.Sensor.raycastAll(frame)
-        else:
-            self.distances = raycastDistance
+    def AddToMap(self, raycast):
+        self.map2d.append(raycastResult)
 
-        # #Barry 12 controller
+        # todo: remove old entries
+
+
+    def computeControlInput(self, state, t, frame, raycastResult):
+        # add the raycast result to the map
+        self.AddToMap(raycastResult)
+
+        # now we have a fully up-to-date map
+        # make a control decision
+
+        # controller:
+        #   1. are we in collision?
+        #if self.GetDistance(self.map2d, self.plant.GetCurrentTraj(), self.plant.GetCurrentTrajTime()) < todo:
+            #pass
 
 
         #u = self.countStuffController()
