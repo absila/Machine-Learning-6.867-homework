@@ -3,12 +3,15 @@ import scipy.integrate as integrate
 import ddapp.objectmodel as om
 from TrajectoryFollowerPlant import TrajectoryFollowerPlant
 
+# this class listens to LCM and reports the next trajectory when the
+# C++ class tells it to
 class OnlineTrajectoryPlanner(object):
 
-    def __init__(self, sensor, plant):
-        self.Sensor = sensor
+    def __init__(self, plant):
         self.currentTraj = 0
-        self.plant = plant
+
+        # subscribe to LCM
+
 
         # I need a 2D map of the previously seen points
         # assume perfect state estimate

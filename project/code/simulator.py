@@ -30,8 +30,11 @@ sys.path.insert(0, '/home/abarry/realtime/LCM/lcmt')
 sys.path.insert(0, '/home/abarry/realtime/LCM/mav')
 
 import lcm
+import select
 from pose_t import pose_t
 from stereo import stereo
+from tvlqr_controller_action import tvlqr_controller_action
+from lcmt import timestamp
 
 
 
@@ -47,7 +50,7 @@ class Simulator(object):
         self.randomSeed = 5
         self.Sensor_rayLength = 8
 
-        self.altitude = 0
+        self.altitude = 20
 
         self.percentObsDensity = percentObsDensity
         self.supervisedTrainingTime = 10
@@ -60,6 +63,9 @@ class Simulator(object):
 
         self.lc = lcm.LCM()
 
+        # subscribe to lcm channels
+        self.lc.subscribe("tvlqr-action", self.tvlqr_action_handler)
+
         # create the visualizer object
         self.app = ConsoleApp()
         # view = app.createView(useGrid=False)
@@ -70,6 +76,9 @@ class Simulator(object):
         self.initializeColorMap()
         if autoInitialize:
             self.initialize()
+
+    def tvlqr_action_handler(self, channel, data):
+        print 'LCM handler for channel: ' + channel
 
     def setDefaultOptions(self):
 
@@ -123,6 +132,18 @@ class Simulator(object):
         self.colorMap['default'] = [0,1,0]
 
     def initialize(self):
+
+        msg = tvlqr_controller_action();
+
+        msg.timestamp = 0;
+        msg.trajectory_number = 0;
+
+        self.lc.publish("rc-trajectory-commands", msg.encode())
+
+        # send listening external controller into autonomous mode
+        msg2 = timestamp();
+        msg2.timestamp = 0;
+        self.lc.publish("state-machine-go-autonomous", msg2.encode())
 
         self.dt = self.options['dt']
         self.setDefaultOptions()
@@ -231,29 +252,33 @@ class Simulator(object):
         z = []
         grey = []
 
-        #rotmat = np.matrix([[0, -1, 0], [0, 0, 1], [-1, 0, 0]])
         rotmat = np.matrix([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
-
-        print 'intersections = ' + str(intersections)
 
         for hit in intersections:
             if hit is not None:
-                print 'hit = ' + str(hit)
 
-                # ok this hit is in body coordinates
-                # transform them into camera xyz coordinates
+                # make each 2D hit a 3D pole
 
-                hit2 = np.matrix(hit)
-                rotvec = rotmat.dot(hit2.transpose())
+                for z_delta in range(-10, 10):
 
-                # must have triple hits for the
-                # stereo filter
-                for q in range(0,3):
-                    x.append(rotvec[0]) # left/right
-                    y.append(rotvec[1]) # up/down
-                    z.append(rotvec[2]) # forward distance
+                    this_z = z_delta
 
-                    grey.append(0)
+                    hit[2] = this_z
+
+                    # ok this hit is in body coordinates
+                    # transform them into camera xyz coordinates
+
+                    hit2 = np.matrix(hit)
+                    rotvec = rotmat.dot(hit2.transpose())
+
+                    # must have triple hits for the
+                    # stereo filter
+                    for q in range(0,3):
+                        x.append(rotvec[0]) # left/right
+                        y.append(rotvec[1]) # up/down
+                        z.append(rotvec[2]) # forward distance
+
+                        grey.append(0)
 
         msg.number_of_points = len(x)
 
@@ -300,6 +325,13 @@ class Simulator(object):
             self.occludedData[idx,:] = currentOccluded
             S_current = (currentPlantState, currentRaycast)
 
+            # check for LCM messages that might contain a new control input
+            timeout = 0.01
+            rfds, wfds, efds = select.select([self.lc.fileno()], [], [], timeout)
+            if rfds:
+                self.lc.handle()
+            else:
+                print("no LCM messages this time")
 
             controlInput, controlInputIdx = self.Controller.computeControlInput(currentPlantState,
                                                                         currentTime, self.frame,
@@ -519,6 +551,14 @@ class Simulator(object):
 
         colorMaxRange = [1,1,0]
 
+        # check for LCM messages that might contain a new control input
+        timeout = 0.01
+        rfds, wfds, efds = select.select([self.lc.fileno()], [], [], timeout)
+        if rfds:
+            self.lc.handle()
+        else:
+            print("no LCM messages this time")
+
         for i in xrange(self.Sensor.numRays):
             ray = self.Sensor.rays[:,i]
             rayTransformed = np.array(frame.transform.TransformNormal(ray))
@@ -688,6 +728,7 @@ if __name__ == "__main__":
     sim = Simulator(percentObsDensity=percentObsDensity, endTime=endTime, randomizeControl=randomizeControl,
                     nonRandomWorld=nonRandomWorld, circleRadius=circleRadius, worldScale=worldScale,
                     supervisedTrainingTime=supervisedTrainingTime)
+
     sim.run()
 
 
